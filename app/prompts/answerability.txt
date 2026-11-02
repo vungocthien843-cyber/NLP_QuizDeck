@@ -1,0 +1,9 @@
+Đọc NGỮ CẢNH và trả lời câu hỏi trắc nghiệm. Chỉ dựa vào ngữ cảnh.
+Trả về JSON: {"choice": "A|B|C|D|NONE", "reason": "..."}. Chọn NONE nếu ngữ cảnh không đủ để trả lời.
+
+NGỮ CẢNH:
+{context}
+
+CÂU HỎI:
+{stem}
+{options}

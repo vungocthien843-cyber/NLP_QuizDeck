@@ -1,0 +1,7 @@
+-r api.txt
+ragas          # pin version sau khi cài, API hay đổi giữa các bản
+ranx>=0.3
+scikit-learn>=1.4
+scipy>=1.11
+krippendorff>=0.6
+pandas>=2.2

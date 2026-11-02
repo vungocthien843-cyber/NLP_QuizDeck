@@ -1,0 +1,18 @@
+# torch CPU cài riêng trước (xem docker/api.Dockerfile). Sau lần cài đầu chạy pip freeze để pin version.
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+pyyaml>=6.0
+sqlalchemy>=2.0
+psycopg[binary]>=3.1
+pgvector>=0.3
+litellm>=1.40
+FlagEmbedding>=1.2
+pymupdf>=1.24
+python-pptx>=0.6
+pillow>=10.0
+numpy>=1.26
+lingua-language-detector>=2.0

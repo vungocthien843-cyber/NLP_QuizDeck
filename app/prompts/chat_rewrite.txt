@@ -1,0 +1,7 @@
+Dựa vào lịch sử hội thoại, viết lại câu hỏi cuối thành một câu hỏi độc lập, đủ nghĩa khi đứng một mình.
+Giữ nguyên ngôn ngữ và thuật ngữ của người hỏi. Chỉ trả về câu hỏi đã viết lại.
+
+LỊCH SỬ:
+{history}
+
+CÂU HỎI CUỐI: {message}

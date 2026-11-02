@@ -1,0 +1,55 @@
+# Tham số thuật toán và tên model (định dạng LiteLLM: "<provider>/<model>").
+# Đổi model chỉ cần sửa file này, không sửa code.
+
+course:
+  name: Xử lý ngôn ngữ tự nhiên     # đưa vào prompt sinh đề và chatbot
+
+models:
+  vlm: openai/gpt-6-luna                  # đổi sang gpt-6-sol nếu luna không nhận ảnh / mô tả kém
+  mcq_generator: openai/gpt-6-luna
+  chat_rewriter: openai/gpt-6-luna
+  chat_answer: openai/gpt-6-luna
+  judge: openai/gpt-6-sol                 # RAGAS
+  judge_independent: openai/gpt-6-sol     # eval/mcq: làm lại câu accepted, cùng họ với model sinh nên chỉ bổ trợ người chấm
+  embedding: BAAI/bge-m3
+  reranker: BAAI/bge-reranker-v2-m3
+
+llm:
+  temperature_generate: 0.7
+  temperature_judge: 0.0
+  temperature_chat: 0.2
+  timeout: 60
+  max_retries: 3
+  reasoning_effort: none       # dòng gpt-6 chỉ nhận temperature khác 1 khi tắt reasoning; null = để mặc định của model
+
+ingestion:
+  render_dpi: 150
+  vlm_min_words: 30            # slide ít hơn số từ này thì gọi VLM
+  image_min_area_ratio: 0.05   # bỏ ảnh nhỏ hơn 5% diện tích trang
+  image_repeat_ratio: 0.3      # bỏ ảnh lặp ở >= 30% số slide (logo, nền)
+  header_repeat_ratio: 0.5     # bỏ dòng lặp ở >= 50% số slide
+  merge_min_words: 15          # slide ít hơn số từ này: cùng tiêu đề slide trước → gộp vào trước, khác tiêu đề → gộp vào slide kế tiếp
+  embed_batch_size: 16
+
+retrieval:
+  top_n: 20                    # số ứng viên mỗi nhánh dense / sparse
+  k: 5
+  rrf_k: 60
+  sparse_backend: bge          # bge | tsvector
+  rerank: false
+
+bank:
+  questions_per_slide: 0.5
+  oversample: 1.5
+  bloom_mix: {remember: 0.4, understand: 0.4, apply: 0.2}
+  min_seed_words: 30
+  context_k: 2
+  concurrency: 5
+  max_retries: 2               # số lần sinh lại khi trượt hậu kiểm (lý do trượt được đưa vào prompt)
+  dedup_threshold: 0.9
+
+chat:
+  history_turns: 4
+  max_context_chunks: 7
+  min_dense_score: 0.35        # tinh chỉnh bằng bộ câu ngoài phạm vi
+  smalltalk_turns: 2           # số câu xã giao (ngoài môn học) được trả lời bình thường mỗi hội thoại
