@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import update
 
-from app.api import attempts, chat, chunks, documents, quizzes, search
+from app.api import admin, attempts, auth, chat, chunks, documents, experiment, quizzes, search, users
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Document
@@ -37,7 +37,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="RAG Quiz API", lifespan=lifespan)
-for module in (documents, search, quizzes, attempts, chat, chunks):
+for module in (auth, documents, search, quizzes, attempts, chat, chunks, users, experiment, admin):
     app.include_router(module.router)
 
 

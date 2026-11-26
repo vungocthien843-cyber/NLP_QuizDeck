@@ -1,8 +1,11 @@
 """Sinh ngân hàng câu hỏi sau khi nạp slide (mục 7). Prompt: app/prompts/mcq_*.txt, mcq_bloom.json, few_shot.json.
 
-Không dùng LLM để chấm lại: chất lượng được giữ bằng (1) prompt chặt theo từng mức Bloom, bắt LLM nêu
-key_point và trích evidence nguyên văn trước khi viết câu hỏi; (2) hậu kiểm bằng luật (validator.py);
-(3) khi trượt, lý do trượt được đưa vào prompt của lần sinh lại.
+bank.pipeline trong config.yaml chọn cách sinh một câu:
+  v1  một lần gọi LLM viết cả câu (prompt mcq_user), như phiên bản 1
+  v2  8 bước: LLM chọn ý + đáp án → LLM viết stem → ViT5 + LLM sinh ứng viên đáp án nhiễu → lọc luật + NLI →
+      chọn bộ 3 bằng entropy có ràng buộc → LLM viết giải thích (pipeline_v2.py, docs/ke-hoach-v2.md)
+Hai cách dùng chung phần sau: hậu kiểm bằng luật (validator.py), chống trùng, lưu; khi trượt, lý do trượt được
+đưa vào prompt của lần sinh lại.
 """
 import asyncio
 import json
@@ -17,10 +20,11 @@ from sqlalchemy import select
 
 from app.config import get_config
 from app.db import SessionLocal
-from app.generation.common import allocate, format_context, shuffle_options, word_count
+from app.generation.common import allocate, build_option_meta, format_context, shuffle_options, word_count
 from app.generation.validator import check_duplicate, feedback_for, validate
 from app.llm_client import JSON_MODE, acomplete, parse_json
-from app.models import Chunk, Document, Question
+from app.generation import pipeline_v2
+from app.models import Chunk, DistractorCandidate, Document, Question
 from app.prompts import PROMPT_DIR, render
 from app.retrieval.embedder import get_embedder
 from app.retrieval.hybrid import retrieve
@@ -130,10 +134,12 @@ async def generate_one(seed: Seed, context: list[Chunk], existing_stems: list[st
     return GeneratedMCQ.model_validate(parse_json(result.text))
 
 
-def _save(state: BankState, seed: Seed, mcq: GeneratedMCQ, status: str, report: dict, stem_embedding=None) -> None:
+def _save(state: BankState, seed: Seed, mcq: GeneratedMCQ, status: str, report: dict, stem_embedding=None,
+          v2: dict | None = None) -> None:
     shuffled = shuffle_options(mcq)
+    option_meta = build_option_meta(mcq, shuffled, (v2 or {}).get("picked"))
     with SessionLocal() as db:
-        db.add(Question(
+        q = Question(
             document_id=state.document_id,
             session_no=state.session_no,
             stem=mcq.stem,
@@ -146,7 +152,25 @@ def _save(state: BankState, seed: Seed, mcq: GeneratedMCQ, status: str, report: 
             status=status,
             validation=report,
             stem_embedding=stem_embedding,
-        ))
+            pipeline_version="v2" if v2 else "v1",
+            answer_type=(v2 or {}).get("answer_type"),
+            selection=(v2 or {}).get("selection"),
+            option_meta=option_meta,
+            concept=mcq.key_point or None,
+        )
+        db.add(q)
+        if v2:
+            db.flush()
+            rows = [DistractorCandidate(question_id=q.id, **{k: c.get(k) for k in (
+                "text", "source", "error_type", "error_type_self", "copy_score", "entail_prob", "score",
+                "rejected_at", "selected")}) for c in v2.get("candidates", [])]
+            db.add_all(rows)
+            db.flush()
+            ids = {" ".join(r.text.lower().split()): r.id for r in rows if r.selected}
+            q.option_meta = {letter: ({**m, "candidate_id": ids.get(" ".join(mcq.options[shuffled.origin[letter]]
+                                                                            .text.lower().split()))}
+                                      if m["role"] == "distractor" else m)
+                             for letter, m in option_meta.items()}
         db.commit()
 
 
@@ -167,8 +191,18 @@ async def process_seed(seed: Seed, sem: asyncio.Semaphore, state: BankState) -> 
         for attempt in range(cfg.max_retries + 1):
             if state.accepted >= state.target:
                 return
+            v2: dict | None = None
             try:
-                mcq = await generate_one(seed, context, state.existing_stems, feedback)
+                if get_config().bank.pipeline == "v2":
+                    mcq, v2 = await pipeline_v2.generate(seed, context, state.existing_stems, feedback)
+                else:
+                    mcq = await generate_one(seed, context, state.existing_stems, feedback)
+            except pipeline_v2.StepFailed as exc:          # v2: một bước trượt (evidence, stem, chọn bộ 3)
+                state.rejected += 1
+                state.last_error = str(exc)
+                feedback = exc.feedback
+                log.info("Seed chunk %s lần %d (v2) trượt bước %s: %s", seed.chunk.id, attempt, exc.step, exc.feedback)
+                continue
             except (ValidationError, ValueError) as exc:   # JSON hỏng / sai schema
                 state.failed += 1
                 state.last_error = f"output sai schema: {exc}"
@@ -183,11 +217,14 @@ async def process_seed(seed: Seed, sem: asyncio.Semaphore, state: BankState) -> 
 
             result, report = validate(mcq, context, seed.chunk.id)
             report.update(attempt=attempt, feedback_used=feedback, llm_bloom_level=mcq.bloom_level,
-                          key_point=mcq.key_point, evidence_text=mcq.evidence)
+                          key_point=mcq.key_point, evidence_text=mcq.evidence,
+                          pipeline_version="v2" if v2 else "v1")
+            if v2:
+                report["llm_calls"] = v2.get("llm_calls")
             if not result.passed:
                 state.rejected += 1
                 feedback = feedback_for(result)
-                await asyncio.to_thread(_save, state, seed, mcq, "rejected", report)
+                await asyncio.to_thread(_save, state, seed, mcq, "rejected", report, None, v2)
                 continue
 
             stem_embedding = await asyncio.to_thread(_embed_for_dedup, mcq)
@@ -198,7 +235,7 @@ async def process_seed(seed: Seed, sem: asyncio.Semaphore, state: BankState) -> 
                     dup = check_duplicate(db, stem_embedding, cfg.dedup_threshold)
                 report["duplicate"] = dup.as_dict()
                 status = "accepted" if dup.passed else "rejected"
-                await asyncio.to_thread(_save, state, seed, mcq, status, report, stem_embedding)
+                await asyncio.to_thread(_save, state, seed, mcq, status, report, stem_embedding, v2)
                 if dup.passed:
                     state.accepted += 1
                     state.existing_stems.append(mcq.stem)
@@ -231,6 +268,12 @@ async def build_bank(document_id: int, slide_from: int | None = None, slide_to: 
     await asyncio.gather(*(process_seed(seed, sem, state) for seed in seeds))
     log.info("Document %s: mục tiêu %d, đạt %d, loại %d, lỗi %d",
              document_id, target, state.accepted, state.rejected, state.failed)
+    try:                                   # v3 (D4): ngân hàng đổi → chia lại 3 mức độ khó
+        from app.learner.difficulty import assign_levels
+        with SessionLocal() as db:
+            assign_levels(db)
+    except Exception:  # noqa: BLE001
+        log.exception("Không tính lại được mức độ khó")
     if state.accepted == 0 and state.failed:
         return f"Không sinh được câu hỏi nào ({state.failed} lượt lỗi). Lỗi gần nhất: {state.last_error}"[:1000]
     return None

@@ -23,14 +23,16 @@ _CITATION = re.compile(r"\[(\d+)\]")
 
 
 def get_or_create_conversation(
-    db: Session, conversation_id: int | None, attempt_id: int | None, question_id: int | None
+    db: Session, conversation_id: int | None, attempt_id: int | None, question_id: int | None,
+    user_id: int | None = None, is_admin: bool = False,
 ) -> Conversation:
+    """Hội thoại thuộc về người tạo; người khác (trừ quản trị viên) không tiếp tục / đọc được."""
     if conversation_id is not None:
         conversation = db.get(Conversation, conversation_id)
-        if not conversation:
+        if not conversation or (user_id is not None and not is_admin and conversation.user_id != user_id):
             raise HTTPException(404, "Không tìm thấy hội thoại")
         return conversation
-    conversation = Conversation(attempt_id=attempt_id, question_id=question_id)
+    conversation = Conversation(attempt_id=attempt_id, question_id=question_id, user_id=user_id)
     db.add(conversation)
     db.commit()
     return conversation
@@ -61,6 +63,13 @@ def _mcq_block(db: Session, question_id: int | None, attempt_id: int | None) -> 
         f"Người học chọn: {chosen or '(chưa chọn)'} · Đáp án đúng: {q.answer}\n"
         f"Lý do từng phương án:\n{rationales}\n"
     )
+    # v3 (D2): phương án sai đã chọn mang loại hiểu nhầm → trợ giảng giải thích nhắm đúng hiểu nhầm đó
+    if chosen and chosen != q.answer:
+        from app.learner.profile import describe
+        m = describe(((q.option_meta or {}).get(chosen) or {}).get("error_type"))
+        if m:
+            block += (f"Hiểu nhầm có thể có của người học (theo phương án đã chọn): {m['ten']}. {m['chan_doan']}\n"
+                      "Hãy giải thích nhắm vào đúng hiểu nhầm này, rồi chỉ ra điểm phân biệt trong tài liệu.\n")
     return block, q
 
 
@@ -71,10 +80,17 @@ def _doc_names(db: Session, chunks: list[Chunk]) -> dict[int, str]:
     return {i: (f or "").rsplit(".", 1)[0] for i, f in rows}
 
 
-def _build_context(db: Session, query: str, question: Question | None) -> tuple[list[Chunk], float | None]:
-    """Chế độ câu hỏi: chunk nguồn của câu đứng đầu, lọc theo tài liệu của câu. Khử trùng, tối đa max_context_chunks."""
+def _build_context(db: Session, query: str, question: Question | None,
+                   allowed_doc_ids: list[int] | None = None) -> tuple[list[Chunk], float | None]:
+    """Chế độ câu hỏi: chunk nguồn của câu đứng đầu, lọc theo tài liệu của câu. Khử trùng, tối đa max_context_chunks.
+    allowed_doc_ids: chỉ truy hồi trong tài liệu người hỏi được xem (None = không giới hạn)."""
     cfg = get_config().chat
-    scope = Scope(document_ids=[question.document_id]) if question else None
+    if question:
+        scope = Scope(document_ids=[question.document_id])
+    elif allowed_doc_ids is not None:
+        scope = Scope(document_ids=allowed_doc_ids or [-1])
+    else:
+        scope = None
     result = retrieve_detailed(db, query, scope)
     pinned_ids = list(question.source_chunk_ids) if question else []
     ordered = list(dict.fromkeys([*pinned_ids, *(c.chunk_id for c in result.chunks)]))[: cfg.max_context_chunks]
@@ -101,7 +117,8 @@ def _save_turn(db: Session, conversation_id: int, user_text: str, answer: str, c
 
 
 async def answer_stream(conversation_id: int, message: str, question_id: int | None = None,
-                        attempt_id: int | None = None) -> AsyncIterator[str]:
+                        attempt_id: int | None = None,
+                        allowed_doc_ids: list[int] | None = None) -> AsyncIterator[str]:
     """Mỗi dòng NDJSON:
       {"type": "token", "text": "..."}
       {"type": "done", "citations": [{"n": 1, "chunk_id": 12, "document_id": 3, "session_no": 5,
@@ -113,7 +130,7 @@ async def answer_stream(conversation_id: int, message: str, question_id: int | N
         history = _history(db, conversation_id, cfg.chat.history_turns)
         mcq_block, question = _mcq_block(db, question_id, attempt_id)
         standalone = await rewrite_question(message, history)
-        context, best_dense = await asyncio.to_thread(_build_context, db, standalone, question)
+        context, best_dense = await asyncio.to_thread(_build_context, db, standalone, question, allowed_doc_ids)
 
         # Từ chối sớm khi hỏi tự do mà không có đoạn nào đủ liên quan (chế độ câu hỏi luôn có chunk nguồn)
         if not question and (best_dense is None or best_dense < cfg.chat.min_dense_score):

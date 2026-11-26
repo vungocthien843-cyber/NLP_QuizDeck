@@ -1,0 +1,13 @@
+Dựa DUY NHẤT vào NGỮ CẢNH, đánh giá TỪNG phương án là đúng, sai, hay không xác định được. Không được giả định chỉ có một đáp án đúng.
+
+NGỮ CẢNH:
+{source_context}
+
+CÂU HỎI: {stem}
+A. {A}
+B. {B}
+C. {C}
+D. {D}
+
+Trả về JSON:
+{"A": "correct|incorrect|undetermined", "B": "...", "C": "...", "D": "...", "reason": "<tối đa 2 câu>"}

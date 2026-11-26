@@ -1,0 +1,23 @@
+NGỮ CẢNH (slide bài giảng):
+{context}
+
+Câu hỏi trắc nghiệm (mức Bloom "{bloom_level}"): {stem}
+Đáp án đúng: {answer}
+Ý kiến thức được kiểm tra: {key_point}
+
+KHÁI NIỆM LÂN CẬN trong môn học (nguồn cho loại "nham_khai_niem_lan_can"; chỉ dùng khái niệm thật sự liên quan):
+{neighbors}
+
+NHIỆM VỤ: viết {n} phương án SAI (đáp án nhiễu) phản ánh những HIỂU LẦM mà sinh viên học chưa kỹ hay mắc. Mỗi phương án dùng một loại lỗi khác nhau, chọn trong:
+{error_types}
+
+Yêu cầu:
+- Mỗi phương án phải CHẮC CHẮN SAI theo ngữ cảnh, không được "đúng một phần".
+- Cùng loại, cùng cấu trúc ngữ pháp với đáp án đúng.
+- ĐỘ DÀI: đáp án đúng có {answer_words} từ. Mỗi phương án dài từ {len_lo} đến {len_hi} từ, và ÍT NHẤT MỘT phương án NGẮN HƠN đáp án đúng. Không thêm mệnh đề giải thích, ví dụ hay "vì…" chỉ để làm câu dài ra.
+- Không chứa nguyên văn đáp án đúng; không dùng "tất cả đều đúng/sai", "không có phương án nào".
+- Không trùng với các phương án đã có:
+{avoid}
+
+Trả về DUY NHẤT một object JSON:
+{"candidates": [{"text": "...", "error_type": "nham_khai_niem_lan_can"}]}

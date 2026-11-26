@@ -1,0 +1,10 @@
+Bạn là giảng viên chấm đề. Dựa DUY NHẤT vào NGỮ CẢNH dưới đây (không dùng kiến thức ngoài), hãy cho biết đáp án được đánh dấu là đúng có được ngữ cảnh hỗ trợ hay không.
+
+NGỮ CẢNH:
+{source_context}
+
+CÂU HỎI: {stem}
+ĐÁP ÁN ĐƯỢC ĐÁNH DẤU ĐÚNG: {key_text}
+
+Trả về JSON:
+{"supported": "yes" | "no" | "partial", "evidence": "<trích ngắn từ ngữ cảnh hoặc rỗng>", "reason": "<1 câu>"}

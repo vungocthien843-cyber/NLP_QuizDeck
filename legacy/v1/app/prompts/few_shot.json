@@ -1,0 +1,44 @@
+[
+  {
+    "key_point": "Bag-of-Words biểu diễn văn bản theo tần suất từ và bỏ qua thứ tự từ.",
+    "evidence": "Mô hình Bag-of-Words biểu diễn mỗi văn bản bằng tần suất xuất hiện của các từ, không quan tâm đến thứ tự của chúng.",
+    "stem": "Trong mô hình Bag-of-Words, một văn bản được biểu diễn dựa trên thông tin nào?",
+    "options": [
+      {"text": "Số lần xuất hiện của từng từ, bỏ qua thứ tự từ", "is_correct": true, "rationale": "Bag-of-Words chỉ đếm tần suất từ và không giữ thứ tự."},
+      {"text": "Thứ tự xuất hiện của các từ trong câu", "is_correct": false, "rationale": "Thứ tự từ chính là thông tin mà Bag-of-Words bỏ đi."},
+      {"text": "Quan hệ cú pháp giữa các từ trong câu", "is_correct": false, "rationale": "Bag-of-Words không phân tích cú pháp."},
+      {"text": "Vector ngữ cảnh học từ mô hình ngôn ngữ", "is_correct": false, "rationale": "Đây là cách biểu diễn của embedding theo ngữ cảnh, không phải Bag-of-Words."}
+    ],
+    "explanation": "Bag-of-Words coi văn bản như một túi từ: chỉ giữ tần suất của từng từ trong từ điển và mất thông tin về thứ tự.",
+    "bloom_level": "remember",
+    "source_chunk_ids": [101]
+  },
+  {
+    "key_point": "IDF giảm trọng số của từ xuất hiện trong nhiều văn bản.",
+    "evidence": "IDF đo mức độ hiếm của một từ trong toàn bộ tập văn bản: từ xuất hiện trong càng nhiều văn bản thì IDF càng nhỏ.",
+    "stem": "Vì sao trong TF-IDF, các từ phổ biến như \"là\", \"của\" thường nhận trọng số thấp?",
+    "options": [
+      {"text": "Vì chúng xuất hiện trong hầu hết văn bản của tập dữ liệu", "is_correct": true, "rationale": "Từ có mặt trong nhiều văn bản có IDF nhỏ, kéo trọng số TF-IDF xuống."},
+      {"text": "Vì chúng có tần suất thấp trong từng văn bản", "is_correct": false, "rationale": "Ngược lại, các từ này thường có TF cao trong từng văn bản."},
+      {"text": "Vì chúng bị loại khỏi từ điển ở bước tách từ", "is_correct": false, "rationale": "Tách từ không loại từ; trọng số thấp đến từ IDF."},
+      {"text": "Vì chúng có độ dài ngắn hơn các từ khác", "is_correct": false, "rationale": "TF-IDF không phụ thuộc vào độ dài của từ."}
+    ],
+    "explanation": "Trọng số TF-IDF là tích của TF và IDF; từ xuất hiện ở hầu hết văn bản có IDF gần 0 nên ít giá trị phân biệt.",
+    "bloom_level": "understand",
+    "source_chunk_ids": [102]
+  },
+  {
+    "key_point": "Áp dụng công thức IDF = log10(N / df).",
+    "evidence": "IDF của từ t được tính theo công thức IDF(t) = log10(N / df(t)), trong đó N là tổng số văn bản và df(t) là số văn bản chứa t.",
+    "stem": "Một tập dữ liệu có 100 văn bản, trong đó từ \"embedding\" xuất hiện ở 10 văn bản. Dùng công thức IDF = log10(N / df), IDF của từ này bằng bao nhiêu?",
+    "options": [
+      {"text": "1", "is_correct": true, "rationale": "log10(100 / 10) = log10(10) = 1."},
+      {"text": "10", "is_correct": false, "rationale": "10 là tỉ số N / df, chưa lấy log."},
+      {"text": "0,1", "is_correct": false, "rationale": "0,1 là df / N, bị đảo tử và mẫu."},
+      {"text": "2", "is_correct": false, "rationale": "2 là log10(N), quên chia cho df."}
+    ],
+    "explanation": "Tính tỉ số N / df trước rồi lấy log cơ số 10: log10(100 / 10) = 1.",
+    "bloom_level": "apply",
+    "source_chunk_ids": [103]
+  }
+]

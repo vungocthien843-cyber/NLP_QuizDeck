@@ -1,0 +1,8 @@
+Dưới đây là 4 phương án của một câu hỏi trắc nghiệm, nhưng câu hỏi đã bị ẩn. Hãy đoán phương án nào nhiều khả năng là đáp án đúng nhất.
+
+A. {A}
+B. {B}
+C. {C}
+D. {D}
+
+Trả về JSON: {"answer": "A|B|C|D", "confidence": <0-1>}

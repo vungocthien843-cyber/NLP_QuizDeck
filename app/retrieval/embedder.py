@@ -1,12 +1,12 @@
 """bge-m3 chạy local: dense 1024 chiều + sparse (lexical weights)."""
 import threading
 from dataclasses import dataclass
-from functools import lru_cache
 
 import numpy as np
 from pgvector import SparseVector
 
 from app.config import get_config, get_settings
+from app.singleton import thread_safe_cache
 from app.models import SPARSE_DIM
 
 
@@ -48,6 +48,6 @@ class Embedder:
         return self.encode([text])[0]
 
 
-@lru_cache
+@thread_safe_cache
 def get_embedder() -> Embedder:
     return Embedder()

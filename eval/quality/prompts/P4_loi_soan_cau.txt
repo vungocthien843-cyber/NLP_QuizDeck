@@ -1,0 +1,21 @@
+Bạn là chuyên gia khảo thí. Kiểm tra câu trắc nghiệm dưới đây theo danh sách lỗi. Chỉ báo lỗi khi có bằng chứng rõ ràng.
+
+Danh sách mã lỗi:
+C1 hỏi chi tiết vụn vặt | C2 chỉ kiểm tra nhớ nguyên văn | C3 nội dung ngoài ngữ cảnh | C4 tham chiếu slide/hình
+S1 stem không trọn vẹn | S2 phủ định ẩn hoặc phủ định kép | S3 stem chứa từ khóa gợi ý key | S4 chỉ key khớp ngữ pháp với stem
+K1 key sai | K2 nhiều hơn một đáp án đúng | K3 key dài/chi tiết hơn hẳn | K4 key chép nguyên văn ngữ cảnh còn distractor thì không
+D1 distractor sai hiển nhiên | D2 distractor khác loại/khác chủ đề với key | D3 phương án không song song về độ dài/ngữ pháp
+D4 distractor là biến thể của key (hội tụ) | D5 có từ tuyệt đối | D6 hai phương án trùng nghĩa/bao nhau | D7 "tất cả/không đáp án nào"
+
+NGỮ CẢNH:
+{source_context}
+
+CÂU HỎI: {stem}
+A. {A}
+B. {B}
+C. {C}
+D. {D}
+ĐÁP ÁN: {key}
+
+Trả về JSON:
+{"flaws": [{"code": "D2", "option": "C", "evidence": "<ngắn>"}], "overall_usable": "yes|minor_edit|no"}

@@ -10,9 +10,25 @@ sqlalchemy>=2.0
 psycopg[binary]>=3.1
 pgvector>=0.3
 litellm>=1.40
-FlagEmbedding>=1.2
+FlagEmbedding>=1.2,<1.5
+# Giữ bộ thư viện mô hình ở dòng 4.x: transformers 5 bỏ module mà FlagEmbedding (bge-m3) cần → API không khởi động được
+transformers>=4.44,<4.58
+sentence-transformers>=3.0,<5.2
+huggingface-hub>=0.24,<1.0
+peft<0.18
 pymupdf>=1.24
 python-pptx>=0.6
 pillow>=10.0
-numpy>=1.26
+numpy>=1.26,<2.3
 lingua-language-detector>=2.0
+# Pipeline v2: tokenizer của ViT5 và mDeBERTa (NLI) cần sentencepiece + protobuf; transformers đi kèm FlagEmbedding
+sentencepiece>=0.1.99
+protobuf>=4.25
+# Mốc 3 (đánh giá): phiếu chấm Excel, kappa, kiểm định
+openpyxl>=3.1
+scikit-learn>=1.3
+scipy>=1.11
+# Đăng nhập Google (OIDC): xác minh ID token (joserfc), cookie giao dịch đăng nhập có chữ ký (itsdangerous), gọi Google (httpx)
+joserfc>=1.0
+itsdangerous>=2.1
+httpx>=0.27

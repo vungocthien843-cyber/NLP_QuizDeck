@@ -22,25 +22,83 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       HF_HOME: /models/hf
+      FORWARDED_ALLOW_IPS: "*"           # tin X-Forwarded-For từ nginx (container web) để lấy đúng IP người dùng
+      AUTH_REQUIRED: "true"              # giao diện mới: mọi API cần đăng nhập Google (ghi đè giá trị trong .env)
     volumes:
       - ./data:/app/data
       - ./config.yaml:/app/config.yaml:ro
       - ./eval:/app/eval
+      - ./training:/app/training             # export_bank.py chạy trong container (cần DB)
+      - ./checkpoints:/app/checkpoints:ro    # ViT5 đã fine-tune (pipeline v2), giải nén dg_models.zip vào đây
       - hf-cache:/models/hf
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"            # chỉ máy chủ truy cập được (xem /docs); người dùng đi qua nginx ở cổng 8080
     depends_on:
       db: {condition: service_healthy}
+    # Có GPU NVIDIA thì bỏ chú thích để ViT5/NLI/reranker chạy nhanh hơn (cần nvidia-container-toolkit):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
 
-  ui:
-    build: {context: ., dockerfile: docker/ui.Dockerfile}
-    environment:
-      API_BASE_URL: http://api:8000
-      PUBLIC_API_URL: http://localhost:8000   # trình duyệt tải ảnh slide trực tiếp từ API
+  web:
+    # Giao diện (React + nginx): mở http://localhost:8080
+    build: {context: ., dockerfile: docker/web.Dockerfile}
     ports:
-      - "8501:8501"
+      - "8080:8080"
     depends_on:
       - api
+    restart: unless-stopped
+
+  # Kiểm thử giao diện tự động (scripts\10_kiem_thu_giao_dien.bat). Không chạy cùng `docker compose up`.
+  e2e:
+    profiles: ["e2e"]
+    image: mcr.microsoft.com/playwright/python:v1.63.0-noble
+    network_mode: "service:web"          # dùng chung mạng với web: trình duyệt mở đúng http://localhost:8080
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      REPO_DIR: /repo
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    volumes:
+      - ./:/repo:ro
+    working_dir: /repo/e2e
+    command: sh -c "python -m pip install -q --root-user-action=ignore -r requirements.txt && python -m pytest -q -p no:cacheprovider ."
+    depends_on:
+      - web
+
+  # Mở hệ thống ra Internet bằng Cloudflare Tunnel (xem docs/huong-dan-trien-khai.md). Chạy: docker compose --profile tunnel up -d
+  tunnel:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # Máy worker cho bản online: nhận PDF sinh viên tải lên rag-quiz-lite, xử lý ở đây rồi đẩy lên Supabase
+  # (tools/worker.py, hướng dẫn: Huong_dan_setup_may_worker_NHOM_8.docx). Chạy: docker compose --profile worker up -d
+  # Máy có GPU: docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile worker up -d --build
+  worker:
+    profiles: ["worker"]
+    build: {context: ., dockerfile: docker/api.Dockerfile}
+    env_file: [.env, .env.sync]          # .env.sync: CLOUD_DATABASE_URL, SUPABASE_URL, SUPABASE_SERVICE_KEY (không commit)
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      LOCAL_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      LOCAL_DATA_DIR: /app/data
+      HF_HOME: /models/hf
+      PYTHONUNBUFFERED: "1"
+    command: python -m tools.worker
+    volumes:
+      - ./data:/app/data
+      - ./config.yaml:/app/config.yaml:ro
+      - ./checkpoints:/app/checkpoints:ro
+      - ./tools:/app/tools:ro
+      - hf-cache:/models/hf
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
 
 volumes:
   pgdata:

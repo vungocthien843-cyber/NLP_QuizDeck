@@ -1,4 +1,5 @@
 .env
+.env.sync
 .venv
 __pycache__
 data
@@ -7,3 +8,5 @@ eval/results
 *.docx
 *.pdf
 .cache
+web/node_modules
+web/dist

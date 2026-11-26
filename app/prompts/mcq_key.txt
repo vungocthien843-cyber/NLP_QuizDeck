@@ -1,0 +1,20 @@
+NGỮ CẢNH:
+{context}
+
+NHIỆM VỤ (bước 1/4 của quy trình ra đề): chọn MỘT ý kiến thức trong chunk hạt giống (id={seed_id}, vai_trò="hạt giống") để hỏi ở mức Bloom "{bloom_level}", và viết ĐÁP ÁN ĐÚNG cho ý đó. Chưa viết câu hỏi, chưa viết phương án sai.
+
+Yêu cầu riêng cho mức "{bloom_level}":
+{bloom_guide}
+
+Ghi lần lượt:
+1. key_point: một câu nêu ý kiến thức sẽ kiểm tra.
+2. evidence: chép NGUYÊN VĂN 1–2 câu từ NGỮ CẢNH chứng minh đáp án đúng. Sao chép đúng từng chữ, không diễn đạt lại, không gộp các câu ở xa nhau. Không tìm được câu chứng minh thì đổi sang ý khác.
+3. answer: đáp án đúng, ngắn gọn (thường 1–15 từ), diễn đạt lại chứ không chép nguyên câu slide, tự hiểu được khi đứng riêng.
+4. answer_type: một trong "thuat_ngu" (tên khái niệm/phương pháp), "dinh_nghia", "thuoc_tinh" (đặc điểm, ưu/nhược điểm), "buoc_quy_trinh", "so_sanh", "nhan_qua", "con_so_cong_thuc", "tinh_huong" (kết quả áp dụng vào tình huống).
+5. source_chunk_ids: id các chunk đã dùng, bắt buộc có {seed_id}.
+
+KHÔNG chọn lại ý của các câu đã có:
+{existing_stems}
+{feedback}
+Trả về DUY NHẤT một object JSON:
+{"key_point": "...", "evidence": "câu trích nguyên văn", "answer": "...", "answer_type": "thuat_ngu", "source_chunk_ids": [{seed_id}]}

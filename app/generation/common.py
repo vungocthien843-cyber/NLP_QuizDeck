@@ -1,7 +1,7 @@
 """Tiện ích dùng chung cho sinh câu hỏi, hậu kiểm và tạo đề."""
 import math
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.models import Chunk
 from app.schemas import GeneratedMCQ
@@ -14,17 +14,43 @@ class ShuffledMCQ:
     options: dict[str, str]
     rationales: dict[str, str]
     answer: str
+    origin: dict[str, int] = field(default_factory=dict)   # chữ cái → chỉ số của phương án trong mcq.options (v3)
 
 
 def shuffle_options(mcq: GeneratedMCQ, rng: random.Random | None = None) -> ShuffledMCQ:
-    """Xáo thứ tự rồi mới gán chữ cái, nên explanation / rationale luôn khớp."""
-    opts = list(mcq.options)
-    (rng or random).shuffle(opts)
+    """Xáo thứ tự rồi mới gán chữ cái, nên explanation / rationale luôn khớp. origin giữ lại vị trí gốc để biết
+    chữ cái nào là phương án nào (trước v3 thông tin này bị mất sau khi xáo)."""
+    order = list(range(len(mcq.options)))
+    (rng or random).shuffle(order)
+    opts = [mcq.options[i] for i in order]
     return ShuffledMCQ(
         options={LETTERS[i]: o.text for i, o in enumerate(opts)},
         rationales={LETTERS[i]: o.rationale for i, o in enumerate(opts)},
         answer=next(LETTERS[i] for i, o in enumerate(opts) if o.is_correct),
+        origin={LETTERS[i]: j for i, j in enumerate(order)},
     )
+
+
+def build_option_meta(mcq: GeneratedMCQ, shuffled: ShuffledMCQ, picked: list[dict] | None,
+                      source_default: str = "v1") -> dict[str, dict]:
+    """Kế hoạch v3, B5: chữ cái → vai trò của phương án, để biết người học chọn sai vì hiểu nhầm gì.
+    picked: thông tin các đáp án nhiễu được chọn (pipeline v2/v3: text, source, error_type), khớp theo text.
+    Không có (câu v1) thì source = source_default, error_type = None (gắn sau bằng scripts/backfill_option_meta)."""
+    by_text = {_norm(p["text"]): p for p in picked or []}
+    meta: dict[str, dict] = {}
+    for letter, idx in shuffled.origin.items():
+        opt = mcq.options[idx]
+        if opt.is_correct:
+            meta[letter] = {"role": "key"}
+            continue
+        p = by_text.get(_norm(opt.text), {})
+        meta[letter] = {"role": "distractor", "source": p.get("source", source_default),
+                        "error_type": p.get("error_type"), "candidate_id": p.get("candidate_id")}
+    return meta
+
+
+def _norm(text: str) -> str:
+    return " ".join((text or "").lower().split())
 
 
 def allocate(n: int, mix: dict[str, float]) -> dict[str, int]:

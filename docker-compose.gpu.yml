@@ -1,0 +1,25 @@
+# Ghép thêm khi máy có GPU NVIDIA (Windows: Docker Desktop + WSL2 + driver NVIDIA; Linux: nvidia-container-toolkit):
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml --profile worker up -d --build
+# Cài PyTorch bản CUDA và cho bge-m3, ViT5, NLI, reranker chạy trên GPU.
+services:
+  api:
+    build:
+      args: {TORCH_INDEX: cu121}
+    environment:
+      EMBEDDING_DEVICE: cuda
+      EMBEDDING_USE_FP16: "true"
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+
+  worker:
+    build:
+      args: {TORCH_INDEX: cu121}
+    environment:
+      EMBEDDING_DEVICE: cuda
+      EMBEDDING_USE_FP16: "true"
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]

@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@import "@fontsource/be-vietnam-pro/400.css";
+@import "@fontsource/be-vietnam-pro/500.css";
+@import "@fontsource/be-vietnam-pro/600.css";
+@import "@fontsource/be-vietnam-pro/700.css";
+
+/* Màu chủ đạo lấy từ logo ICTU (#0774B9); thang màu theo oklch để các sắc độ đều nhau */
+@theme {
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-50: oklch(0.97 0.02 240);
+  --color-brand-100: oklch(0.93 0.04 240);
+  --color-brand-200: oklch(0.86 0.07 240);
+  --color-brand-500: oklch(0.58 0.14 242);
+  --color-brand-600: #0774b9;
+  --color-brand-700: oklch(0.45 0.12 245);
+  --color-brand-800: oklch(0.37 0.1 248);
+  --color-brand-900: oklch(0.28 0.07 250);
+  --color-ink: oklch(0.24 0.02 255);
+  --color-muted: oklch(0.52 0.02 255);
+  --color-line: oklch(0.91 0.01 255);
+  --color-canvas: oklch(0.985 0.004 250);
+}
+
+html, body, #root { height: 100%; }
+body {
+  @apply bg-canvas text-ink font-sans antialiased;
+  font-feature-settings: "ss01";
+}
+:focus-visible { @apply outline-2 outline-offset-2 outline-brand-600; }
+
+/* Định dạng câu trả lời Markdown của trợ lý */
+.prose-chat > * + * { margin-top: 0.6em; }
+.prose-chat ul { list-style: disc; padding-left: 1.25rem; }
+.prose-chat ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-chat li + li { margin-top: 0.2em; }
+.prose-chat strong { font-weight: 600; }
+.prose-chat code { @apply rounded bg-canvas px-1 text-[0.85em] ring-1 ring-line; }
+.prose-chat pre { @apply overflow-x-auto rounded-lg bg-canvas p-2 text-xs ring-1 ring-line; }
+.prose-chat table { @apply w-full text-xs; }
+.prose-chat th, .prose-chat td { @apply border border-line px-2 py-1 text-left; }
+.prose-chat h1, .prose-chat h2, .prose-chat h3 { font-weight: 600; }

@@ -1,0 +1,12 @@
+Dựa vào NGỮ CẢNH, trả lời câu hỏi trắc nghiệm.
+
+NGỮ CẢNH:
+{source_context}
+
+CÂU HỎI: {stem}
+A. {A}
+B. {B}
+C. {C}
+D. {D}
+
+Trả về JSON: {"answer": "A|B|C|D", "confidence": <0-1>}

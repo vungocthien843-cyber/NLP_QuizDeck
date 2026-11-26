@@ -1,0 +1,22 @@
+GẮN NHÃN HIỂU NHẦM cho các phương án sai của một câu trắc nghiệm.
+
+NGỮ CẢNH (slide bài giảng):
+{context}
+
+Câu hỏi: {stem}
+Đáp án đúng: {answer}
+Ý kiến thức được kiểm tra: {key_point}
+
+Các loại hiểu nhầm:
+{error_types}
+
+Các phương án SAI cần gắn nhãn:
+{candidates}
+
+NHIỆM VỤ: với MỖI phương án sai, chọn MỘT loại hiểu nhầm mà người học chọn phương án đó nhiều khả năng đang mắc.
+- Dựa vào dấu hiệu của từng loại và nội dung ngữ cảnh (ví dụ: phương án nêu một khái niệm khác có trong ngữ cảnh → "nham_khai_niem_lan_can").
+- Nếu phương án chỉ sai ngẫu nhiên, lạc đề, không thể hiện hiểu nhầm cụ thể nào, ghi "khong_ro".
+- Không sửa nội dung phương án, không đánh giá phương án đúng hay sai.
+
+Trả về DUY NHẤT một object JSON, mỗi phương án một phần tử, i là số thứ tự trong danh sách trên:
+{"labels": [{"i": 0, "error_type": "nham_khai_niem_lan_can", "ly_do": "<tối đa 15 từ>"}]}

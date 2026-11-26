@@ -4,6 +4,7 @@ import time
 import streamlit as st
 
 import api_client as api
+from views import experiment
 from views.left import call
 from views.state import TAB_CHAT, S, attach_question, finish_quiz, go, open_right, reset_quiz, start_quiz
 from views.theme import esc, html_block
@@ -19,6 +20,47 @@ def _name(doc_id) -> str:
 
 
 BLOOM_VI = {"remember": "Nhớ", "understand": "Hiểu", "apply": "Vận dụng"}
+DIFFICULTY = {"Trộn": None, "Dễ": "easy", "Trung bình": "medium", "Khó": "hard"}
+
+
+# ---------------- Người học (v3) ----------------
+def _learner() -> None:
+    """Nhập mã người học để hệ thống ghi lại câu trả lời và tìm điểm yếu. Không bắt buộc."""
+    if not S.user:
+        with st.expander("👤 Theo dõi tiến bộ của bạn (tuỳ chọn)", expanded=False):
+            st.caption("Nhập mã (ví dụ mã sinh viên) để hệ thống ghi lại câu sai, chẩn đoán hiểu nhầm "
+                       "và tạo đề luyện điểm yếu. Không cần mật khẩu.")
+            code = st.text_input("Mã người học", key="login_code", max_chars=64)
+            name = st.text_input("Tên hiển thị (không bắt buộc)", key="login_name", max_chars=100)
+            if st.button("Bắt đầu theo dõi", key="login_btn", use_container_width=True):
+                if not code.strip():
+                    st.error("Nhập mã người học.")
+                else:
+                    user, err = call(api.login, code.strip(), name.strip() or None)
+                    if err:
+                        st.error(err)
+                    else:
+                        S.user = user
+                        st.rerun()
+        return
+    who = S.user.get("display_name") or S.user["code"]
+    c1, c2 = st.columns([4, 1], vertical_alignment="center")
+    c1.markdown(f"<div class='hint'>👤 <b>{esc(who)}</b> · mã {esc(S.user['code'])}</div>", unsafe_allow_html=True)
+    if c2.button("Đổi", key="logout_btn", use_container_width=True):
+        S.user = None
+        st.rerun()
+    prof, err = call(api.get_profile, S.user["user_id"])
+    if err or not prof:
+        return
+    with st.expander(f"🔍 Hồ sơ hiểu nhầm · {prof['n_answered']} câu đã làm"
+                     + (f" · đúng {prof['accuracy'] * 100:.0f}%" if prof.get("accuracy") is not None else ""),
+                     expanded=False):
+        if not prof["weaknesses"]:
+            st.caption("Chưa phát hiện hiểu nhầm nào lặp lại. Làm thêm đề để hệ thống tìm điểm yếu của bạn.")
+        for w in prof["weaknesses"]:
+            html_block(f"<div class='hint' style='margin-bottom:8px'><b>{esc(w.get('ten') or w['error_type'])}</b>"
+                       f" · ý: {esc(w['concept'])}<br><span>{esc(w.get('chan_doan') or '')}</span>"
+                       f"<br><small>Gặp {w['n_seen']} lần · mức {w['score']:.1f}</small></div>")
 
 
 def _allocate(n: int, sizes: dict[int, int]) -> dict[int, int]:
@@ -33,6 +75,9 @@ def _allocate(n: int, sizes: dict[int, int]) -> dict[int, int]:
 
 # ---------------- Tạo đề ----------------
 def _setup(docs: list[dict]) -> None:
+    _learner()
+    if experiment.box():          # đang giữa thử nghiệm: chỉ hiện các bước thử nghiệm
+        return
     usable = [d for d in docs if d["status"] == "ready" and d["num_accepted"] > 0]
     html_block('<div class="field-label">Chọn slide để tạo đề</div>')
     selected = []
@@ -55,6 +100,8 @@ def _setup(docs: list[dict]) -> None:
     else:
         n = int(choice)
 
+    level = st.segmented_control("Mức độ khó", list(DIFFICULTY), default="Trộn", key="quiz_difficulty") or "Trộn"
+
     alloc = ""
     if len(sizes) > 1 and MIN_Q <= n <= avail:
         alloc = " · ".join(f"{esc(_name(k))}: {v}" for k, v in _allocate(n, sizes).items())
@@ -64,7 +111,11 @@ def _setup(docs: list[dict]) -> None:
                f'(số câu đang có trong phạm vi đã chọn). Thời gian làm bài: 1 phút / câu. '
                f'Cơ cấu mức độ: Nhớ 40% · Hiểu 40% · Vận dụng 20%.</div>')
 
-    if st.button(f"Bắt đầu làm bài · {n} câu", type="primary", use_container_width=True, key="start_quiz"):
+    start = st.button(f"Bắt đầu làm bài · {n} câu", type="primary", use_container_width=True, key="start_quiz")
+    weak = bool(S.user) and st.button("🎯 Luyện điểm yếu của tôi", use_container_width=True, key="start_weak",
+                                      help="Ưu tiên câu hỏi về những ý bạn hay nhầm, có phương án sai đúng kiểu "
+                                           "hiểu nhầm đó, để kiểm tra bạn đã sửa được chưa.")
+    if start or weak:
         err = ""
         if not selected:
             err = "Chọn ít nhất một bài đã có câu hỏi."
@@ -75,12 +126,18 @@ def _setup(docs: list[dict]) -> None:
         if err:
             S.quiz_err = err
         else:
-            quiz, e = call(api.create_quiz, {"document_ids": selected}, n)
+            quiz, e = call(api.create_quiz, {"document_ids": selected}, n, None, DIFFICULTY[level],
+                           "weakness" if weak else "normal", (S.user or {}).get("user_id"))
             if e:
                 S.quiz_err = e
             else:
                 S.quiz_label = " + ".join(_name(d["id"]) for d in docs if d["id"] in selected)
+                if quiz.get("mode") == "weakness":
+                    S.quiz_label = "Luyện điểm yếu · " + S.quiz_label
+                elif DIFFICULTY[level]:
+                    S.quiz_label += f" · {level}"
                 start_quiz(quiz)
+                S.quiz_notice = quiz.get("notice")
                 st.rerun()
     if S.quiz_err:
         st.error(S.quiz_err)
@@ -111,11 +168,12 @@ def _submit() -> None:
         S.quiz_err = f"Còn {len(missing)} câu chưa trả lời: câu {', '.join(str(i + 1) for i in missing)}."
         S.qi = missing[0]
         return
-    attempt, err = call(api.submit_attempt, S.quiz["quiz_id"], S.answers)
-    if err:
-        S.quiz_err = err
-        return
-    review, err = call(api.get_review, attempt["attempt_id"])
+    with st.spinner("Đang chấm bài…"):
+        attempt, err = call(api.submit_attempt, S.quiz["quiz_id"], S.answers, None, (S.user or {}).get("user_id"))
+        if err:
+            S.quiz_err = err
+            return
+        review, err = call(api.get_review, attempt["attempt_id"])
     if err:
         S.quiz_err = err
         return
@@ -134,6 +192,8 @@ def _taking() -> None:
         _timer()
     html_block(f'<div class="hint">Đã làm {done}/{total} câu</div><div class="bar"><i style="width:{done / total * 100:.0f}%">'
                f'</i></div>')
+    if S.get("quiz_notice"):
+        st.info(S.quiz_notice)
 
     with st.container(key="palette"):
         for start in range(0, total, 10):
@@ -192,6 +252,16 @@ def _option_rows(item: dict) -> str:
     return "".join(rows)
 
 
+def _diagnosis_html(item: dict) -> str:
+    """v3 (D1): chọn sai một phương án có gắn loại hiểu nhầm → nói rõ người học có thể đang nhầm điều gì."""
+    m = item.get("misconception")
+    if item.get("is_correct") or not m:
+        return ""
+    return ('<div class="diag" style="margin:8px 0;padding:8px 10px;border-radius:8px;border-left:3px solid #d97706;'
+            'background:rgba(217,119,6,.08)"><b>🔍 Có thể bạn đang nhầm: ' + esc(m.get("ten") or "") + '</b><br>'
+            + esc(m.get("chan_doan") or "") + '</div>')
+
+
 def _evidence_html(item: dict) -> str:
     src = item["sources"][0] if item.get("sources") else None
     if item.get("evidence"):
@@ -228,6 +298,7 @@ def _review() -> None:
         open_right(TAB_CHAT)
         st.rerun()
 
+    experiment.review_top()
     filt = st.segmented_control("Xem lại", ["Câu sai", "Tất cả"], key="review_filter") or "Câu sai"
     shown = [(i, it) for i, it in enumerate(items) if filt == "Tất cả" or not it["is_correct"]]
     if not shown:
@@ -243,7 +314,8 @@ def _review() -> None:
             expl = f"<div class=expl><b>Giải thích:</b> {esc(it['explanation'])}</div>" if it.get("explanation") else ""
             html_block(f'<div class="qn">CÂU {i + 1}{lvl_tag}<span class="res {res_cls}">{res_txt}</span>'
                        f'{viewing}</div><div class="stem">{esc(it["stem"])}</div>{_option_rows(it)}'
-                       f'{expl}{_evidence_html(it)}')
+                       f'{_diagnosis_html(it)}{expl}{_evidence_html(it)}')
+            experiment.item_feedback(it)
             src = it["sources"][0] if it.get("sources") else None
             doc_id = it.get("evidence_document_id") or (src and src["document_id"])
             slide = it.get("evidence_slide_no") or (src and src["slide_no"])

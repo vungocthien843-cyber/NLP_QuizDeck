@@ -1,0 +1,15 @@
+NGỮ CẢNH:
+{context}
+
+Căn cứ trong slide: {evidence}
+
+Câu hỏi: {stem}
+Các phương án (theo thứ tự):
+{options}
+
+NHIỆM VỤ (bước cuối): viết giải thích cho người học sau khi làm bài.
+- rationales: đúng {n} câu, theo ĐÚNG thứ tự các phương án ở trên. Phương án đúng: vì sao đúng, dựa trên căn cứ. Phương án sai: chỉ ra chỗ sai cụ thể (nhầm với khái niệm nào, sai chi tiết nào), mỗi câu 1 dòng.
+- explanation: 1–3 câu tóm tắt kiến thức cần nhớ.
+- Không nhắc chữ cái A/B/C/D hay số thứ tự phương án (thứ tự sẽ được xáo).
+
+Trả về DUY NHẤT một object JSON: {"rationales": ["...", "..."], "explanation": "..."}

@@ -51,6 +51,22 @@ class DocumentOut(BaseModel):
     num_accepted: int = 0
     num_rejected: int = 0
     num_slides: int = 0
+    is_shared: bool = True              # true: thư viện môn học; false: slide riêng của người tải lên
+    is_mine: bool = False               # người đang đăng nhập là người tải lên
+    can_edit: bool = False              # được xóa / sinh thêm câu hỏi / sửa thông tin
+    owner_email: str | None = None      # chỉ trả cho quản trị viên
+
+
+class DocumentPatch(BaseModel):
+    session_no: int | None = None
+    is_shared: bool | None = None       # chỉ quản trị viên: đưa slide riêng vào thư viện chung (hoặc ngược lại)
+
+
+class QuotaOut(BaseModel):
+    unlimited: bool
+    max_docs: int
+    used_docs: int
+    max_upload_mb: int
 
 
 class SlideInfo(BaseModel):
@@ -103,10 +119,16 @@ class RetrievedChunk(BaseModel):
 
 
 # ---------- Quizzes & attempts ----------
+Difficulty = Literal["easy", "medium", "hard"]
+
+
 class QuizCreateIn(BaseModel):
     scope: Scope
     n: int = Field(ge=MIN_QUIZ_QUESTIONS, le=MAX_QUIZ_QUESTIONS)
     bloom_mix: dict[BloomLevel, float] | None = None
+    difficulty: Difficulty | None = None           # v3 (D5): None = trộn mọi mức
+    mode: Literal["normal", "weakness"] = "normal"  # v3 (D6): weakness cần user_id
+    user_id: int | None = None
 
 
 class QuizQuestionOut(BaseModel):
@@ -122,12 +144,18 @@ class QuizOut(BaseModel):
     num_requested: int
     num_questions: int
     questions: list[QuizQuestionOut]
+    mode: str = "normal"
+    difficulty: str | None = None
+    notice: str | None = None                      # v3: ví dụ không đủ câu đúng mức khó, chưa có dữ liệu điểm yếu
 
 
 class AttemptIn(BaseModel):
     quiz_id: int
     user_name: str | None = None
     answers: dict[int, Letter]          # question_id -> đáp án chọn
+    user_id: int | None = None          # v3: người học đã đăng nhập bằng mã
+    times_ms: dict[int, int] | None = None
+    allow_unanswered: bool = False      # hết giờ: nộp cả câu chưa làm (tính là sai, không gắn loại hiểu nhầm)
 
 
 class AttemptOut(BaseModel):
@@ -162,6 +190,7 @@ class ReviewItem(BaseModel):
     evidence: str | None = None             # câu trích nguyên văn từ slide chứng minh đáp án đúng
     evidence_document_id: int | None = None
     evidence_slide_no: int | None = None    # slide chứa câu trích (đã dò trên PDF)
+    misconception: dict | None = None       # v3 (D1): chọn sai → {code, ten, chan_doan} của phương án đã chọn
 
 
 class ReviewOut(BaseModel):
@@ -170,7 +199,73 @@ class ReviewOut(BaseModel):
     items: list[ReviewItem]
 
 
+# ---------- v3: người học ----------
+class LoginIn(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+    display_name: str | None = Field(default=None, max_length=100)
+
+
+class UserOut(BaseModel):
+    user_id: int
+    code: str
+    display_name: str | None
+
+
+class WeaknessOut(BaseModel):
+    concept: str
+    error_type: str
+    ten: str | None = None
+    chan_doan: str | None = None
+    score: float
+    n_seen: int
+
+
+class ProfileOut(BaseModel):
+    user_id: int
+    n_attempts: int
+    n_answered: int
+    accuracy: float | None
+    weaknesses: list[WeaknessOut]
+    by_error_type: dict[str, int]           # số lần chọn sai theo loại hiểu nhầm (mọi thời điểm)
+    error_type_names: dict[str, str] = {}   # mã loại hiểu nhầm → tên tiếng Việt (để hiển thị)
+
+
 # ---------- Chat ----------
+class ConversationOut(BaseModel):
+    conversation_id: int
+    title: str
+    created_at: str
+    n_messages: int
+
+
+class ChatCitation(BaseModel):
+    n: int
+    chunk_id: int
+    document_id: int
+    session_no: int | None = None
+    slide_no: int | None = None
+    slide_end: int | None = None
+    title: str | None = None
+    filename: str | None = None
+
+
+class ChatMessageOut(BaseModel):
+    role: str
+    content: str
+    citations: list[ChatCitation] = []
+
+
+class AttemptSummary(BaseModel):
+    attempt_id: int
+    quiz_id: int
+    submitted_at: str
+    score_10: float
+    num_questions: int
+    num_correct: int
+    mode: str
+    label: str                              # tên các bài trong đề
+
+
 class ChatIn(BaseModel):
     """question_id / attempt_id: câu trắc nghiệm đính kèm vào tin nhắn này (có thể đổi theo từng tin)."""
     message: str

@@ -4,6 +4,7 @@ Dùng lại kết quả của bước nạp slide: PNG từng trang trong data/r
 (PPTX đã được LibreOffice chuyển sang PDF ở cùng thư mục; file tải lên là PDF thì dùng chính nó).
 """
 import re
+import threading
 import unicodedata
 from difflib import SequenceMatcher
 from functools import lru_cache
@@ -15,6 +16,10 @@ from app.config import get_config, get_settings
 from app.models import Document
 
 HIGHLIGHT_COLOR = (1.0, 0.86, 0.2)
+# MuPDF không an toàn khi nhiều luồng dùng cùng lúc. FastAPI chạy endpoint đồng bộ trong threadpool, nên xem lại bài
+# và ảnh slide tô vàng có thể gọi pymupdf song song → kẹt (14/11: /attempts/{id}/review treo khi các request chồng nhau).
+# Mọi lần dùng pymupdf đi qua một khoá.
+_PDF_LOCK = threading.Lock()
 MIN_BLOCK_WORDS = 3         # chỉ tính các đoạn khớp liên tiếp từ 3 từ trở lên
 MIN_COVERAGE = 0.5          # khớp dưới 50% số từ của câu trích → coi như không có trên slide này
 EXACT_COVERAGE = 0.9        # khớp từ 90% → coi là đúng slide chứa câu trích
@@ -84,7 +89,7 @@ def find_rects(page: pymupdf.Page, text: str) -> tuple[list, bool]:
 
 @lru_cache(maxsize=128)
 def _render(pdf: str, slide_no: int, highlight: str, dpi: int) -> bytes:
-    with pymupdf.open(pdf) as doc:
+    with _PDF_LOCK, pymupdf.open(pdf) as doc:
         page = doc[slide_no - 1]
         rects, _ = find_rects(page, highlight)
         if rects:
@@ -95,8 +100,9 @@ def _render(pdf: str, slide_no: int, highlight: str, dpi: int) -> bytes:
 
 
 def clear_cache() -> None:
-    """Bỏ ảnh đã render trong bộ nhớ (gọi khi xoá tài liệu)."""
+    """Bỏ ảnh đã render và vị trí câu trích đã dò trong bộ nhớ (gọi khi xoá tài liệu)."""
     _render.cache_clear()
+    _locate.cache_clear()
 
 
 def slide_image(doc: Document, slide_no: int, highlight: str | None = None) -> bytes | None:
@@ -113,12 +119,18 @@ def slide_image(doc: Document, slide_no: int, highlight: str | None = None) -> b
 
 
 def locate(doc: Document, text: str, candidates: list[int]) -> int | None:
-    """Tìm slide (trong các slide ứng viên) chứa câu trích; ưu tiên slide khớp nguyên câu."""
+    """Tìm slide (trong các slide ứng viên) chứa câu trích; ưu tiên slide khớp nguyên câu.
+    Kết quả được nhớ theo (file, câu trích, slide ứng viên): xem lại cùng câu hỏi lần sau không mở PDF nữa."""
     pdf = pdf_path(doc)
     if not pdf or not text:
         return None
+    return _locate(str(pdf), text, tuple(candidates))
+
+
+@lru_cache(maxsize=4096)
+def _locate(pdf: str, text: str, candidates: tuple[int, ...]) -> int | None:
     partial = None
-    with pymupdf.open(pdf) as d:
+    with _PDF_LOCK, pymupdf.open(pdf) as d:
         for n in candidates:
             if not 1 <= n <= d.page_count:
                 continue

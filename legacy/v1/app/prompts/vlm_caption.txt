@@ -1,0 +1,8 @@
+Mô tả nội dung slide bài giảng trong ảnh để phục vụ tìm kiếm và ra đề.
+- Giải thích sơ đồ, biểu đồ, bảng: các thành phần và quan hệ giữa chúng.
+- Giữ nguyên thuật ngữ tiếng Anh; viết bằng ngôn ngữ của slide.
+- Chỉ mô tả những gì có trong ảnh, KHÔNG suy đoán hay thêm kiến thức ngoài.
+- Không lặp lại nguyên văn phần text đã trích dưới đây.
+
+TEXT ĐÃ TRÍCH:
+{slide_text}

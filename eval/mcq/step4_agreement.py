@@ -3,6 +3,7 @@
 Chạy lần 1: tính kappa và tạo data/phieu_chot.csv, trong đó câu bất đồng để trống để 2 người thảo luận rồi điền.
 Chạy lần 2 (sau khi điền xong): tính tỉ lệ đạt, precision, recall của bộ lọc.
 Chạy: python -m eval.mcq.step4_agreement
+Chỉ có phiếu người 1 (không có phiếu người 2): chạy ở chế độ một người chấm, không tính kappa.
 """
 from sklearn.metrics import cohen_kappa_score
 
@@ -133,27 +134,37 @@ def quality_rows(verdicts: dict[str, bool], key: list[dict], a: dict, b: dict, q
 
 
 def main() -> None:
-    for path in (SHEET_RATER1, SHEET_RATER2, SAMPLE_KEY):
+    single = SHEET_RATER1.exists() and not SHEET_RATER2.exists()
+    for path in ((SHEET_RATER1, SAMPLE_KEY) if single else (SHEET_RATER1, SHEET_RATER2, SAMPLE_KEY)):
         if not path.exists():
             fail(f"thiếu {path.name}. Chạy trước: python -m eval.mcq.step3_sample")
-    sheet1, sheet2 = read_csv(SHEET_RATER1), read_csv(SHEET_RATER2)
-    a, b = parse_sheet(sheet1, SHEET_RATER1.name), parse_sheet(sheet2, SHEET_RATER2.name)
-    if set(a) != set(b):
-        fail("hai phiếu không cùng danh sách ma_cau.")
+    sheet1 = read_csv(SHEET_RATER1)
+    a = parse_sheet(sheet1, SHEET_RATER1.name)
 
-    agreement = agreement_rows(a, b)
-    write_csv(RESULTS_DIR / "dong_thuan.csv", agreement)
-    print("Độ đồng thuận giữa 2 người chấm:")
-    for row in agreement:
-        kappa = "không xác định" if row["kappa"] == "" else row["kappa"]
-        print(f"  {row['tieu_chi']}: kappa={kappa}, giống nhau {row['ti_le_giong_nhau']:.0%}")
+    if single:
+        # Chỉ một người chấm: không có kappa, người đó là chuẩn. Báo cáo phải ghi rõ điều này.
+        print("Chỉ có phiếu của người 1: bỏ qua độ đồng thuận (kappa), dùng điểm của người 1 làm chuẩn.")
+        b = a
+        verdicts = {code: all(scores[c] == 1 for c in BINARY_CRITERIA) for code, scores in a.items()}
+    else:
+        sheet2 = read_csv(SHEET_RATER2)
+        b = parse_sheet(sheet2, SHEET_RATER2.name)
+        if set(a) != set(b):
+            fail("hai phiếu không cùng danh sách ma_cau.")
 
-    if not SHEET_FINAL.exists():
-        write_csv(SHEET_FINAL, build_final_sheet(a, b, sheet1))
-    verdicts = parse_final(read_csv(SHEET_FINAL))
-    if verdicts is None:
-        print(f"\nHai người thảo luận và điền các ô trống trong {SHEET_FINAL.name}, rồi chạy lại lệnh này.")
-        return
+        agreement = agreement_rows(a, b)
+        write_csv(RESULTS_DIR / "dong_thuan.csv", agreement)
+        print("Độ đồng thuận giữa 2 người chấm:")
+        for row in agreement:
+            kappa = "không xác định" if row["kappa"] == "" else row["kappa"]
+            print(f"  {row['tieu_chi']}: kappa={kappa}, giống nhau {row['ti_le_giong_nhau']:.0%}")
+
+        if not SHEET_FINAL.exists():
+            write_csv(SHEET_FINAL, build_final_sheet(a, b, sheet1))
+        verdicts = parse_final(read_csv(SHEET_FINAL))
+        if verdicts is None:
+            print(f"\nHai người thảo luận và điền các ô trống trong {SHEET_FINAL.name}, rồi chạy lại lệnh này.")
+            return
 
     rows = quality_rows(verdicts, read_csv(SAMPLE_KEY), a, b, load_questions())
     write_csv(RESULTS_DIR / "chat_luong.csv", rows)

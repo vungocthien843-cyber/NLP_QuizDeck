@@ -1,0 +1,9 @@
+Trả lời câu hỏi trắc nghiệm sau bằng hiểu biết của bạn.
+
+CÂU HỎI: {stem}
+A. {A}
+B. {B}
+C. {C}
+D. {D}
+
+Trả về JSON: {"answer": "A|B|C|D", "confidence": <0-1>}

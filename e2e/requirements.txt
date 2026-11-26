@@ -1,0 +1,12 @@
+# Chạy trong image mcr.microsoft.com/playwright/python (đã có Playwright + Chromium).
+# Các gói dưới đây để tạo phiên đăng nhập thử trực tiếp trong database (không cần đăng nhập Google thật).
+playwright==1.63.0         # cùng bản với image mcr.microsoft.com/playwright/python:v1.63.0-noble (trình duyệt đã có sẵn)
+pytest>=8
+sqlalchemy>=2.0
+psycopg[binary]>=3.1
+pgvector>=0.2
+pydantic-settings>=2
+pyyaml>=6
+itsdangerous>=2.1
+joserfc>=1.0
+httpx>=0.27

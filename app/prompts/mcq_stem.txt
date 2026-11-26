@@ -1,0 +1,23 @@
+NGỮ CẢNH:
+{context}
+
+NHIỆM VỤ (bước 2/4): viết CÂU HỎI (stem) trắc nghiệm mức Bloom "{bloom_level}" sao cho đáp án đúng chính là:
+- Ý kiến thức: {key_point}
+- Đáp án đúng: {answer}
+- Loại đáp án: {answer_type}
+- Căn cứ trong slide: {evidence}
+
+Yêu cầu riêng cho mức "{bloom_level}":
+{bloom_guide}
+
+Quy tắc viết stem:
+- Hỏi đúng một ý, tự đứng được (người làm bài KHÔNG thấy ngữ cảnh: không viết "theo đoạn trên", "trong ngữ cảnh", "chunk").
+- Từ để hỏi khớp loại đáp án (thuật ngữ → "Kỹ thuật/khái niệm nào…", nhân–quả → "Vì sao…", quy trình → "Bước nào…").
+- KHÔNG chứa đáp án đúng hoặc gợi ý lộ đáp án; diễn đạt lại, không chép nguyên câu slide.
+- Không phủ định kép. Nếu buộc phải hỏi phủ định thì viết hoa chữ KHÔNG.
+- Không nhắc chữ cái A/B/C/D.
+
+KHÔNG trùng ý với các câu đã có:
+{existing_stems}
+{feedback}
+Trả về DUY NHẤT một object JSON: {"stem": "..."}

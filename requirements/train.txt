@@ -1,0 +1,9 @@
+# Huấn luyện mô hình sinh đáp án nhiễu (training/kaggle/train_ddp.py), chạy trên Kaggle — không cần cho API.
+# transformers < 4.56: các bản mới hơn đã chuyển diverse beam search ra khỏi thư viện lõi.
+torch>=2.1
+transformers>=4.44,<4.56
+sentencepiece>=0.1.99
+loguru>=0.7
+torchmetrics>=1.0
+matplotlib>=3.7
+pytest>=8.0

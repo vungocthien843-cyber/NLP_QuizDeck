@@ -1,8 +1,8 @@
-"""bge-reranker-v2-m3 (thí nghiệm, bật bằng retrieval.rerank trong config.yaml)."""
+"""bge-reranker-v2-m3: rerank khi truy hồi (bật bằng retrieval.rerank) và chấm điểm phương án ở pipeline v2."""
 import threading
-from functools import lru_cache
 
 from app.config import get_config
+from app.singleton import thread_safe_cache
 from app.retrieval.embedder import load_flag_model
 
 
@@ -25,6 +25,15 @@ class Reranker:
                       key=lambda x: x[1], reverse=True)
 
 
-@lru_cache
+    def scores(self, query: str, texts: list[str], normalize: bool = False) -> list[float]:
+        """Điểm thô (logit) của từng cặp (query, text), giữ thứ tự đầu vào. Dùng ở pipeline v2 (K4)."""
+        if not texts:
+            return []
+        with self._lock:
+            out = self.model.compute_score([[query, t] for t in texts], normalize=normalize)
+        return [float(out)] if isinstance(out, (float, int)) else [float(x) for x in out]
+
+
+@thread_safe_cache
 def get_reranker() -> Reranker:
     return Reranker()

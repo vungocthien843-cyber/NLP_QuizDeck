@@ -1,0 +1,7 @@
+Phân loại câu hỏi sau theo thang Bloom rút gọn:
+remember (nhớ lại sự kiện/định nghĩa), understand (giải thích, so sánh, phân biệt), apply (áp dụng vào tình huống mới), analyze (phân tích, suy luận nhiều bước).
+
+CÂU HỎI: {stem}
+PHƯƠNG ÁN: A. {A} | B. {B} | C. {C} | D. {D}
+
+Trả về JSON: {"bloom": "remember|understand|apply|analyze", "reason": "<1 câu>"}

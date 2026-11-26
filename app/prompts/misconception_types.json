@@ -1,0 +1,51 @@
+{
+  "nham_khai_niem_lan_can": {
+    "ten": "Nhầm với khái niệm lân cận",
+    "mo_ta": "nhầm với một khái niệm gần giống có trong bài (cùng chương, cùng nhóm phương pháp)",
+    "dau_hieu": "phương án nêu đúng một khái niệm/phương pháp KHÁC có thật trong bài, hoặc mô tả đúng của khái niệm khác đó",
+    "chan_doan": "Bạn có thể đang nhầm khái niệm được hỏi với một khái niệm gần giống trong bài.",
+    "vi_du": "Hỏi định nghĩa TF-IDF nhưng chọn mô tả của BM25"
+  },
+  "khai_quat_qua_muc": {
+    "ten": "Khái quát quá mức",
+    "mo_ta": "mở rộng một ý đúng ra ngoài phạm vi nó còn đúng (áp cho mọi trường hợp, bỏ điều kiện)",
+    "dau_hieu": "phương án lấy một ý đúng trong một số trường hợp rồi nói như thể đúng cho mọi trường hợp",
+    "chan_doan": "Bạn có thể đang áp một ý chỉ đúng trong vài trường hợp cho mọi trường hợp.",
+    "vi_du": "Làm mịn Laplace giúp mọi mô hình ngôn ngữ chính xác hơn"
+  },
+  "dao_nhan_qua": {
+    "ten": "Đảo nhân quả",
+    "mo_ta": "đảo chiều quan hệ: lấy kết quả làm nguyên nhân, hoặc đầu ra làm đầu vào",
+    "dau_hieu": "phương án giữ đúng hai thành phần nhưng đảo chiều quan hệ giữa chúng",
+    "chan_doan": "Bạn có thể đang đảo ngược quan hệ nguyên nhân – kết quả (hoặc đầu vào – đầu ra).",
+    "vi_du": "Perplexity thấp làm cho xác suất mô hình gán cho câu thử cao"
+  },
+  "sai_thu_tu_buoc": {
+    "ten": "Sai thứ tự các bước",
+    "mo_ta": "đổi thứ tự các bước của một quy trình hoặc thuật toán",
+    "dau_hieu": "phương án gồm các bước đúng nhưng sắp sai trình tự",
+    "chan_doan": "Bạn nhớ đúng các bước nhưng có thể đang sắp sai thứ tự của quy trình.",
+    "vi_du": "Tính IDF trước, rồi mới tách từ văn bản"
+  },
+  "gan_nham_thuoc_tinh": {
+    "ten": "Gán nhầm thuộc tính",
+    "mo_ta": "gán đặc điểm, ưu điểm hoặc hạn chế của khái niệm khác cho khái niệm đang hỏi",
+    "dau_hieu": "phương án nói về đúng khái niệm được hỏi nhưng kèm một đặc điểm thuộc về khái niệm khác",
+    "chan_doan": "Bạn có thể đang gán đặc điểm của một khái niệm khác cho khái niệm được hỏi.",
+    "vi_du": "RNN xử lý song song toàn bộ chuỗi trong một bước (đặc điểm của Transformer)"
+  },
+  "dung_nhung_khong_tra_loi": {
+    "ten": "Đúng nhưng không trả lời câu hỏi",
+    "mo_ta": "một mệnh đề đúng trong bài nhưng không trả lời điều câu hỏi hỏi",
+    "dau_hieu": "phương án tự nó đúng theo bài nhưng lệch trọng tâm câu hỏi",
+    "chan_doan": "Phương án bạn chọn đúng về nội dung nhưng chưa trả lời đúng điều câu hỏi hỏi: hãy đọc kỹ câu hỏi.",
+    "vi_du": "Hỏi mục đích của làm mịn, chọn 'n-gram dựa trên phép đếm'"
+  },
+  "sai_mot_chi_tiet": {
+    "ten": "Sai một chi tiết then chốt",
+    "mo_ta": "giữ cấu trúc của đáp án đúng nhưng đổi một chi tiết then chốt (tăng↔giảm, trước↔sau, encoder↔decoder, con số)",
+    "dau_hieu": "phương án gần như trùng đáp án đúng, chỉ khác một từ hoặc một con số quyết định nghĩa",
+    "chan_doan": "Bạn nắm ý chung nhưng có thể đang nhớ sai một chi tiết quan trọng.",
+    "vi_du": "Perplexity càng cao thì mô hình càng tốt"
+  }
+}

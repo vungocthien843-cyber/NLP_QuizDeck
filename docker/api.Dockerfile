@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Mặc định PyTorch bản CPU. Máy có GPU NVIDIA: docker-compose.gpu.yml đặt TORCH_INDEX=cu121 (bản CUDA)
+ARG TORCH_INDEX=cpu
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/${TORCH_INDEX}
 COPY requirements/api.txt requirements/api.txt
 RUN pip install --no-cache-dir -r requirements/api.txt
 

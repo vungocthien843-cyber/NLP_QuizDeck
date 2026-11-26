@@ -1,0 +1,16 @@
+THU TU CHAY (so dau ten file = thu tu). Moi file tu bat Docker, ghi log vao eval\logs\.
+
+  0_kiem_thu_tu_dong        Kiem tra he thong (khong goi API).
+  1_sinh_doi_chung_llm      Sinh doi chung LLM-GPT + LLM-Gemini, cham mien phi lop A + E.  [LAM BAY GIO]
+  2_cham_openai             Cham M1, M2, M1b cho V3 va LLM-GPT (OpenAI, co tran chi phi).    [SAU FILE 1]
+  3_bao_cao_tong_hop        Tao lai eval\BAO_CAO_DANH_GIA.md.
+  4_xuat_cau_hoi_excel      Xuat cau hoi + dap an + slide ra Excel de tu kiem tra.
+  5_tao_phieu_cham_nguoi    Tang 2: tao phieu cham (DA TAO SAN cho 2 nguoi cham, chi chay lai khi can).
+  6_phan_tich_phieu_nguoi   Tang 2: phan tich phieu da cham.
+  7_thu_nghiem_sv_chuan_bi  Tang 3: chuan bi buoi thu nghiem sinh vien.
+  8_thu_nghiem_sv_phan_tich Tang 3: phan tich ket qua sinh vien.
+  9_thu_nghiem_sv_dong      Tang 3: dong thu nghiem.
+  10_kiem_thu_giao_dien     Kiem tra giao dien (Playwright, khong goi API). Chay sau file 0.
+
+_da_chay\  File da chay xong mot lan, giu lai de lam lai neu can (KHONG can chay nua).
+           Chay lai 2b se TAO LAI bo cau hoi NLP -> doi chung va phieu cham se khong con khop.

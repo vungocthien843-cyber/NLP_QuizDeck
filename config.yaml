@@ -13,6 +13,7 @@ models:
   judge_independent: openai/gpt-6-sol     # eval/mcq: làm lại câu accepted, cùng họ với model sinh nên chỉ bổ trợ người chấm
   embedding: BAAI/bge-m3
   reranker: BAAI/bge-reranker-v2-m3
+  nli: MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7   # lọc "chắc chắn sai" ở pipeline v2
 
 llm:
   temperature_generate: 0.7
@@ -47,9 +48,47 @@ bank:
   concurrency: 5
   max_retries: 2               # số lần sinh lại khi trượt hậu kiểm (lý do trượt được đưa vào prompt)
   dedup_threshold: 0.9
+  pipeline: v2                 # v1 = một lần gọi LLM như phiên bản 1; v2 = 8 bước (docs/ke-hoach-v2.md)
+
+# Pipeline v2: sinh ứng viên đáp án nhiễu → lọc → chọn bộ 3 (kỹ thuật K1–K5, xem docs/ke-hoach-v2.md)
+distractor:
+  sources: [vit5, llm]         # [vit5] | [llm] | [vit5, llm]; chưa có checkpoint ViT5 thì tự bỏ qua vit5
+  vit5_checkpoint: checkpoints/dg-vit5-stage1/best
+  n_candidates: 8
+  max_vit5_keep: 6
+  llm_candidates: 5            # v3 (A3): 3 → 5; trước đây 17/28 câu chỉ còn đúng 3 ứng viên, bước chọn bộ không có gì để chọn
+  tag_errors: true             # v3 (B2): LLM gắn loại hiểu nhầm cho mọi ứng viên còn sống (cả ViT5), +1 lần gọi/câu
+  min_alive: 5                 # v3 (A3): sau lọc còn < 5 ứng viên thì sinh bù trước khi chọn bộ (dùng refill_rounds)
+  neighbor_concepts: 3         # v3 (B3): 3 khái niệm lân cận lấy bằng RAG, gợi ý cho loại "nhầm khái niệm lân cận"
+  decoding: sampling           # diverse_beam | beam | sampling. transformers ≥ 5 bỏ group beam search (diverse_beam
+                               # tự chuyển sang sampling, xem log 14/11), nên ghi đúng cách đang chạy thật
+  copy_threshold: 0.95
+  length_ratio: 0.4
+  entail_threshold: 0.5
+  nli_min_key_entail: 0.5      # NLI chấm đáp án đúng < mức này → NLI không hiểu câu, không lọc câu đó
+  nli_max_reject_share: 0.5    # NLI định loại > 50% ứng viên → bão hoà
+  nli_saturated_keep: 4        # bão hoà: loại từ ứng viên điểm NLI cao nhất xuống, giữ lại 4 ứng viên thấp nhất
+  nli_context_words: 120       # tiền đề NLI: evidence + câu liên quan nhất (bỏ phần mô tả hình không liên quan)
+  scorer: reranker             # reranker | llm (LLM cần hỗ trợ logprobs)
+  selection: entropy           # entropy | entropy_no_delta | top3 | random (3 cái sau để so sánh)
+  delta: 0.15
+  set_length_ratio: 1.5        # chọn bộ 3: tránh bộ có độ dài 4 phương án lệch > 1,5 lần (A3 của bộ đánh giá)
+  avoid_key_convergence: true  # chọn bộ 3: tránh bộ mà key là "điểm hội tụ" của các phương án (A10)
+  min_error_types: 2           # v3 (B4): bộ 3 phủ ≥ 2 loại hiểu nhầm khác nhau; không bộ nào đạt thì nới dần (0 = tắt)
+  key_length_rank: true        # chọn bộ 3: hạng độ dài của key rút ngẫu nhiên 0..3 → key ngắn/dài nhất đều ~25% (sửa sau G1)
+  unclear_penalty: 0.3         # v3 (B4): trừ vào entropy của bộ cho mỗi phương án gắn nhãn "khong_ro"
+  tau: 1.0
+  refill_rounds: 1
+  device: auto
 
 chat:
   history_turns: 4
   max_context_chunks: 7
   min_dense_score: 0.35        # tinh chỉnh bằng bộ câu ngoài phạm vi
   smalltalk_turns: 2           # số câu xã giao (ngoài môn học) được trả lời bình thường mỗi hội thoại
+
+# v3 (docs/ke-hoach-v3-chi-tiet.md, nhóm D): cá nhân hoá theo người học
+learner:
+  weakness_decay_days: 14        # nửa đời điểm hiểu nhầm: mắc lỗi 14 ngày trước tính bằng nửa lỗi hôm nay
+  weakness_top_k: 5              # đề luyện điểm yếu nhắm vào 5 cặp (ý kiến thức, loại hiểu nhầm) nặng nhất
+  difficulty_quantiles: [0.3333, 0.6667]   # chia ngân hàng thành 3 mức độ khó gần bằng nhau

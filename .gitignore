@@ -1,4 +1,5 @@
 .env
+.env.sync
 .venv/
 __pycache__/
 *.pyc
@@ -8,3 +9,30 @@ data/renders/*
 eval/results/*
 !eval/results/.gitkeep
 .cache/
+
+# Phiên bản 2
+checkpoints/
+training/data/raw/
+training/data/processed/
+eval/v2/results/*
+!eval/v2/results/.gitkeep
+legacy/v1/data/uploads/*
+legacy/v1/data/renders/*
+_v2src.tgz
+
+# Dọn dẹp (06/11)
+*.zip
+*.tgz
+*.md5
+Claude outputs/
+
+# Bộ đánh giá chất lượng (08/11): dữ liệu sinh ra và kết quả chạy, tạo lại được bằng export/run_eval
+eval/quality/data/*
+!eval/quality/data/.gitkeep
+eval/quality/results/*
+!eval/quality/results/.gitkeep
+
+# Dọn dẹp (15/11): sao lưu DB, log chạy .bat, kho lưu trữ đồ cũ (xoá được nếu không cần)
+backups/
+eval/logs/
+_luu_tru/

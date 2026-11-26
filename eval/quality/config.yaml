@@ -1,0 +1,60 @@
+# Bộ đánh giá chất lượng câu trắc nghiệm: so sánh V1 và V2 (đặc tả: prompt_danh_gia_V1_V2.md)
+# Ngưỡng dưới đây là giá trị khởi đầu của đặc tả, CHƯA hiệu chỉnh trên dữ liệu thật.
+
+# Cấu hình của eval/v2/run_ablation → tên phiên bản trong báo cáo
+versions:
+  C0: V1            # một lần gọi LLM
+  C4: V2            # đầy đủ: ViT5 giai đoạn 1 + LLM, lọc, chọn bằng entropy có δ
+  C1: V2-llm        # ablation "− đa nguồn": ứng viên chỉ từ LLM
+  C2: V2-vit5       # ablation thêm: ứng viên chỉ từ ViT5
+  C5: V3            # v3: câu nhiễu chẩn đoán (docs/ke-hoach-v3.md)
+# Chọn lại bộ 3 trên cùng kho ứng viên của C4 (không sinh lại)
+selection_variants:
+  entropy_no_delta: V2-no-delta   # bỏ ràng buộc δ (bài gốc Chung et al. 2020)
+  random: V2-random               # "V2 − xếp hạng": chọn ngẫu nhiên 3 ứng viên còn sống
+  top3: V2-top3                   # 3 ứng viên điểm cao nhất, không dùng entropy
+# Ablation nguồn sinh của V3: chọn lại bộ 3 trên kho ứng viên C5 khi chỉ cho phép một nguồn (không sinh lại)
+source_variants:
+  llm: V3-chi-LLM
+  vit5: V3-chi-ViT5
+baseline: V1
+
+seed: 42
+bootstrap: 1000
+
+# Mô hình dùng để ĐÁNH GIÁ (lớp J, S) phải KHÁC HỌ với mô hình V2 dùng để sinh và lọc (họ OpenAI).
+# Chưa chọn: điền 2 mô hình khác họ trước khi chạy lớp J/S.
+# Đang dùng họ Gemini (khác họ OpenAI của mô hình sinh). Tên "-latest" do Google cập nhật: muốn tái lập chính xác
+# thì thay bằng tên phiên bản cố định và ghi vào báo cáo. Cần GEMINI_API_KEY trong .env.
+# Hạn chế: hai solver cùng họ Gemini (đặc tả khuyên 2 họ khác nhau) — ghi vào phần hạn chế của báo cáo.
+eval_models:
+  judge: gemini/gemini-pro-latest
+  solvers: [gemini/gemini-flash-latest, gemini/gemini-flash-lite-latest]
+generator_models: [openai/gpt-6-luna]   # dùng để cảnh báo khi mô hình đánh giá trùng mô hình sinh
+
+# Cách gọi mô hình của lớp S/J (metrics/llm_eval.py)
+eval_llm:
+  runs: 2            # số lần chạy mỗi solver × mỗi điều kiện, mỗi lần xáo phương án
+  temperature: 0.0
+  concurrency: 5
+  cache: true        # lưu đệm ở eval/quality/cache/llm_cache.jsonl; xoá file để chấm lại
+  # Gói miễn phí Gemini: số lần gọi tối đa mỗi phút theo từng model (khớp theo chuỗi con của tên model).
+  # 429 theo phút → chờ retry_wait giây rồi thử lại (tối đa retries lần); 429 theo NGÀY → dừng model đó, chạy lại hôm sau.
+  rpm: {gemini-pro: 4, gemini-flash-lite: 12, gemini-flash: 8}
+  retries: 4
+  retry_wait: 65
+
+thresholds:
+  length_ratio_max: 1.5      # A3: max(len)/min(len)
+  stem_copy: 0.7             # A8: ROUGE-L(stem, context) > ngưỡng → chép slide
+  leak_ratio: 0.9            # A12: độ giống của đáp án câu i trong câu hỏi câu j
+  leak_min_syllables: 3      # A12: đáp án ngắn hơn thế không xét (tránh trùng tình cờ như "NLU")
+  dup_stem_cos: 0.9          # A13
+  band_low: 0.5              # E2: a (dạng phương án đứng riêng)
+  band_high: 0.85            # E2: b
+  band_stem: auto            # E2 dạng kèm câu hỏi: auto = cùng phân vị với [a, b] (cos dạng này dồn về ~0,9)
+  topic_tau: auto            # E3: auto = phân vị topic_null_q của cos(đáp án nhiễu, slide của câu khác).
+                             #     τ = 0,3 của đặc tả không dùng được với bge-m3 (mọi cos đều > 0,3)
+  topic_null_q: 0.5
+  sensitivity: 0.1           # phân tích độ nhạy: thử mỗi ngưỡng ± giá trị này (checklist mục 11)
+  dup_option_cos: 0.9        # E4

@@ -30,6 +30,9 @@ DEFAULTS = {
     "attach": None,          # câu trắc nghiệm đính kèm tin nhắn tiếp theo
     "pending_prompt": None,  # câu hỏi gợi ý được bấm, gửi ở lượt chạy kế tiếp
     "confirm_delete": None,  # id bài đang chờ xác nhận xoá
+    "user": None,            # v3: {"user_id", "code", "display_name"} sau khi nhập mã người học
+    "quiz_notice": None,
+    "exp": None,             # Mốc 3: trạng thái thử nghiệm sinh viên của người học đang đăng nhập (None = không tham gia)     # v3: thông báo của backend khi tạo đề (bù mức khó, chưa có dữ liệu điểm yếu)
 }
 
 

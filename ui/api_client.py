@@ -75,14 +75,26 @@ def slide_url(document_id: int, slide_no: int, highlight: str | None = None) -> 
 
 
 
-def create_quiz(scope: dict, n: int, bloom_mix: dict | None = None) -> dict:
-    return _json(_client.post("/quizzes", json={"scope": scope, "n": n, "bloom_mix": bloom_mix}))
+def create_quiz(scope: dict, n: int, bloom_mix: dict | None = None, difficulty: str | None = None,
+                mode: str = "normal", user_id: int | None = None) -> dict:
+    return _json(_client.post("/quizzes", json={"scope": scope, "n": n, "bloom_mix": bloom_mix,
+                                                "difficulty": difficulty, "mode": mode, "user_id": user_id}))
+
+
+def login(code: str, display_name: str | None = None) -> dict:
+    return _json(_client.post("/users/login", json={"code": code, "display_name": display_name}))
+
+
+def get_profile(user_id: int) -> dict:
+    return _json(_client.get(f"/users/{user_id}/profile"))
 
 
 
 
-def submit_attempt(quiz_id: int, answers: dict[int, str], user_name: str | None = None) -> dict:
-    return _json(_client.post("/attempts", json={"quiz_id": quiz_id, "answers": answers, "user_name": user_name}))
+def submit_attempt(quiz_id: int, answers: dict[int, str], user_name: str | None = None,
+                   user_id: int | None = None) -> dict:
+    return _json(_client.post("/attempts", json={"quiz_id": quiz_id, "answers": answers, "user_name": user_name,
+                                                 "user_id": user_id}))
 
 
 def get_review(attempt_id: int) -> dict:
@@ -112,3 +124,24 @@ def chat_stream(message: str, conversation_id: int | None = None, attempt_id: in
             resp.close()
 
     return int(resp.headers["X-Conversation-Id"]), events()
+
+
+# ---------- Thử nghiệm sinh viên (Mốc 3, G4/G5) ----------
+def get_quiz(quiz_id: int) -> dict:
+    return _json(_client.get(f"/quizzes/{quiz_id}"))
+
+
+def experiment_state(user_id: int) -> dict:
+    return _json(_client.get("/experiment/state", params={"user_id": user_id}))
+
+
+def experiment_practice(user_id: int) -> dict:
+    return _json(_client.post("/experiment/practice", json={"user_id": user_id}))
+
+
+def send_feedback(user_id: int, attempt_id: int, kind: str, value: int | None = None,
+                  question_id: int | None = None, comment: str | None = None) -> None:
+    resp = _client.post("/feedback", json={"user_id": user_id, "attempt_id": attempt_id, "kind": kind,
+                                           "value": value, "question_id": question_id, "comment": comment})
+    if resp.is_error:
+        _json(resp)

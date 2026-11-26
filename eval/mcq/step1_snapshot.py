@@ -2,7 +2,7 @@
 
 Chỉ lấy tài liệu đang hoạt động và câu do pipeline hiện tại sinh. Câu của pipeline cũ (có bước LLM
 groundedness trong validation) bị loại, vì kết quả của chúng không nói gì về hệ thống hiện tại.
-Chạy: python -m eval.mcq.step1_snapshot [--force]
+Chạy: python -m eval.mcq.step1_snapshot [--force] [--docs ID ...] [--pipeline v1|v2]
 """
 import argparse
 import hashlib
@@ -51,6 +51,8 @@ def duplicate_pairs(questions: list[Question], threshold: float) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--force", action="store_true", help="Ghi đè snapshot cũ")
+    parser.add_argument("--docs", nargs="+", type=int, help="chỉ lấy các tài liệu có id này")
+    parser.add_argument("--pipeline", choices=["v1", "v2"], help="chỉ lấy câu do pipeline này sinh")
     args = parser.parse_args()
     if SNAPSHOT.exists() and not args.force:
         fail(f"{SNAPSHOT.name} đã có. Tạo lại sẽ làm phiếu chấm cũ không còn khớp; thêm --force nếu chắc chắn.")
@@ -58,11 +60,15 @@ def main() -> None:
     cfg = get_config()
     with SessionLocal() as db:
         documents = list(db.scalars(select(Document).where(Document.is_active).order_by(Document.id)))
+        if args.docs:
+            documents = [d for d in documents if d.id in set(args.docs)]
         doc_ids = [d.id for d in documents]
         chunks = list(db.scalars(select(Chunk).where(Chunk.document_id.in_(doc_ids), Chunk.is_active)))
         all_questions = list(db.scalars(select(Question).where(Question.document_id.in_(doc_ids)).order_by(Question.id)))
 
     questions = [q for q in all_questions if "groundedness" not in (q.validation or {})]
+    if args.pipeline:
+        questions = [q for q in questions if (getattr(q, "pipeline_version", None) or "v1") == args.pipeline]
     if not questions:
         fail("không có câu hỏi nào của pipeline hiện tại trong các tài liệu đang hoạt động.")
 
